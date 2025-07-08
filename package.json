@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:src": "tsc -b && vite build",
     "build:server": "tsc --project ./server/tsconfig.server.json",
     "lint": "eslint .",
     "preview": "vite preview"
