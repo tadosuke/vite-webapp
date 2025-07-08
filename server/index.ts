@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import routes from './routes';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,12 +13,7 @@ const PORT = process.env.PORT || 3000;
 const staticDir = path.resolve(__dirname, '../dist-src');
 
 app.use(express.static(staticDir));
-
-// ルート以外は index.html を返す（SPA 対応）
-// ワイルドカードを正規表現に変更
-app.get(/^\/((?!api).)*/, (req: express.Request, res: express.Response) => {
-  res.sendFile(path.join(staticDir, 'index.html'));
-});
+app.use(routes);
 
 app.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);
