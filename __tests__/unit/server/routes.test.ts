@@ -19,6 +19,9 @@ vi.mock('../../../server/api-controller.js', () => ({
   }),
   getConversationMessages: vi.fn((req, res) => {
     res.json([{ id: 1, text: 'mocked message', timestamp: '2023-01-01 00:00:00', sender: 'user' }])
+  }),
+  deleteConversation: vi.fn((req, res) => {
+    res.json({ success: true })
   })
 }))
 
@@ -106,6 +109,18 @@ describe('routes', () => {
 
       const response = await request(app)
         .delete('/api/messages')
+
+      expect(response.status).toBe(200)
+      expect(response.body).toEqual({ success: true })
+    })
+
+    it('DELETE /conversations/:conversationId エンドポイントが設定されている', async () => {
+      const app = express()
+      app.use(express.json())
+      app.use('/api', createRouter())
+
+      const response = await request(app)
+        .delete('/api/conversations/123')
 
       expect(response.status).toBe(200)
       expect(response.body).toEqual({ success: true })

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Request, Response } from 'express'
-import { handleEcho, getMessages, clearMessages } from '../../../server/api-controller.js'
+import { handleEcho, getMessages, clearMessages, deleteConversation } from '../../../server/api-controller.js'
 
 // greeting モジュールをモック
 vi.mock('../../../server/greeting.js', () => ({
@@ -14,6 +14,7 @@ const mockClearMessages = vi.fn()
 const mockCreateConversation = vi.fn()
 const mockGetConversations = vi.fn()
 const mockGetMessagesByConversationId = vi.fn()
+const mockDeleteConversation = vi.fn()
 vi.mock('../../../server/db.js', () => ({
   getDatabase: () => ({
     saveMessage: mockSaveMessage,
@@ -21,26 +22,29 @@ vi.mock('../../../server/db.js', () => ({
     clearMessages: mockClearMessages,
     createConversation: mockCreateConversation,
     getConversations: mockGetConversations,
-    getMessagesByConversationId: mockGetMessagesByConversationId
+    getMessagesByConversationId: mockGetMessagesByConversationId,
+    deleteConversation: mockDeleteConversation
   })
 }))
 
 describe('api-controller', () => {
+  const createMockRequest = (body: any = {}, params: any = {}): Request => ({
+    body,
+    params
+  } as Request)
+
+  const createMockResponse = (): { res: Response; json: any; status: any } => {
+    const json = vi.fn()
+    const status = vi.fn(() => ({ json }))
+    const res = { json, status } as unknown as Response
+    return { res, json, status }
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   describe('handleEcho', () => {
-    const createMockRequest = (body: any): Request => ({
-      body
-    } as Request)
-
-    const createMockResponse = (): { res: Response; json: any; status: any } => {
-      const json = vi.fn()
-      const status = vi.fn(() => ({ json }))
-      const res = { json, status } as unknown as Response
-      return { res, json, status }
-    }
 
     it('有効な文字列が提供された場合、メッセージを返し、ユーザーとエコーメッセージを保存する', async () => {
       const req = createMockRequest({ message: 'Hello, World!' })
@@ -224,6 +228,55 @@ describe('api-controller', () => {
       mockClearMessages.mockRejectedValue(new Error('DB Error'))
 
       await clearMessages(req, res)
+
+      expect(status).toHaveBeenCalledWith(500)
+      expect(json).toHaveBeenCalledWith({ error: 'Database error' })
+    })
+  })
+
+  describe('deleteConversation', () => {
+    it('有効な会話IDで会話を削除し、成功レスポンスを返す', async () => {
+      const req = createMockRequest({}, { conversationId: '123' })
+      const { res, json, status } = createMockResponse()
+
+      mockDeleteConversation.mockResolvedValue(undefined)
+
+      await deleteConversation(req, res)
+
+      expect(mockDeleteConversation).toHaveBeenCalledWith(123)
+      expect(json).toHaveBeenCalledWith({ success: true })
+      expect(status).not.toHaveBeenCalled()
+    })
+
+    it('無効な会話ID（数値以外）の場合、400エラーを返す', async () => {
+      const req = createMockRequest({}, { conversationId: 'invalid' })
+      const { res, json, status } = createMockResponse()
+
+      await deleteConversation(req, res)
+
+      expect(status).toHaveBeenCalledWith(400)
+      expect(json).toHaveBeenCalledWith({ error: 'Invalid conversation ID' })
+      expect(mockDeleteConversation).not.toHaveBeenCalled()
+    })
+
+    it('会話IDが空の場合、400エラーを返す', async () => {
+      const req = createMockRequest({}, { conversationId: '' })
+      const { res, json, status } = createMockResponse()
+
+      await deleteConversation(req, res)
+
+      expect(status).toHaveBeenCalledWith(400)
+      expect(json).toHaveBeenCalledWith({ error: 'Invalid conversation ID' })
+      expect(mockDeleteConversation).not.toHaveBeenCalled()
+    })
+
+    it('データベースエラー時に500エラーを返す', async () => {
+      const req = createMockRequest({}, { conversationId: '123' })
+      const { res, json, status } = createMockResponse()
+
+      mockDeleteConversation.mockRejectedValue(new Error('DB Error'))
+
+      await deleteConversation(req, res)
 
       expect(status).toHaveBeenCalledWith(500)
       expect(json).toHaveBeenCalledWith({ error: 'Database error' })

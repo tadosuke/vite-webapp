@@ -117,3 +117,26 @@ export async function getConversationMessages(req: Request, res: Response): Prom
     res.status(500).json({ error: "Database error" });
   }
 }
+
+/**
+ * 会話削除 API のコントローラー
+ * 指定された会話IDの会話とその関連メッセージを削除する
+ */
+export async function deleteConversation(req: Request, res: Response): Promise<void> {
+  try {
+    const { conversationId } = req.params;
+    
+    if (!conversationId || isNaN(Number(conversationId))) {
+      res.status(400).json({ error: "Invalid conversation ID" });
+      return;
+    }
+
+    const db = getDatabase();
+    await db.deleteConversation(Number(conversationId));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete conversation error:", error);
+    res.status(500).json({ error: "Database error" });
+  }
+}

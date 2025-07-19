@@ -69,6 +69,16 @@ function Chat() {
   }
 
   /**
+   * 会話削除時の処理
+   * 削除された会話が現在選択中の会話の場合、新規会話状態にする
+   */
+  const handleConversationDelete = (deletedConversationId: number) => {
+    if (currentConversationId === deletedConversationId) {
+      startNewConversation()
+    }
+  }
+
+  /**
    * メッセージ送信時の処理
    * 新しいメッセージを作成してメッセージリストに追加し、
    * API/echoエンドポイントに送信してレスポンスを取得する
@@ -130,6 +140,7 @@ function Chat() {
         onConversationSelect={loadConversation}
         selectedConversationId={currentConversationId}
         onNewConversation={startNewConversation}
+        onConversationDelete={handleConversationDelete}
         refreshTrigger={refreshConversations}
       />
       <div className="chat-container">

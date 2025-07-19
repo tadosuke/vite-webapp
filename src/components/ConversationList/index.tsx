@@ -11,6 +11,7 @@ interface ConversationListProps {
   onConversationSelect: (conversationId: number) => void
   selectedConversationId: number | null
   onNewConversation: () => void
+  onConversationDelete: (conversationId: number) => void
   refreshTrigger?: number // 履歴リストを再読み込みするためのトリガー
 }
 
@@ -20,9 +21,10 @@ interface ConversationListProps {
  * @param onConversationSelect - 会話選択時のコールバック関数
  * @param selectedConversationId - 現在選択されている会話のID
  * @param onNewConversation - 新規会話作成のコールバック関数
+ * @param onConversationDelete - 会話削除時のコールバック関数
  * @returns 会話履歴リストのJSX要素
  */
-function ConversationList({ onConversationSelect, selectedConversationId, onNewConversation, refreshTrigger }: ConversationListProps) {
+function ConversationList({ onConversationSelect, selectedConversationId, onNewConversation, onConversationDelete, refreshTrigger }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -66,6 +68,37 @@ function ConversationList({ onConversationSelect, selectedConversationId, onNewC
    */
   const formatTitle = (title: string): string => {
     return title.length > 15 ? title.substring(0, 15) + '...' : title
+  }
+
+  /**
+   * 会話を削除する
+   * @param conversationId - 削除する会話のID
+   * @param event - クリックイベント（バブリングを防ぐため）
+   */
+  const handleDeleteConversation = async (conversationId: number, event: React.MouseEvent) => {
+    event.stopPropagation() // 会話選択のクリックイベントをキャンセル
+
+    if (!confirm('この会話を削除しますか？この操作は取り消せません。')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // 削除成功時に親コンポーネントに通知
+        onConversationDelete(conversationId)
+        // リストを再読み込み
+        await loadConversations()
+      } else {
+        alert('会話の削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error)
+      alert('会話の削除に失敗しました')
+    }
   }
 
   return (
@@ -114,12 +147,21 @@ function ConversationList({ onConversationSelect, selectedConversationId, onNewC
                 onClick={() => onConversationSelect(conversation.id)}
                 title={conversation.title}
               >
-                <div className="conversation-item-title">
-                  {formatTitle(conversation.title)}
+                <div className="conversation-item-content">
+                  <div className="conversation-item-title">
+                    {formatTitle(conversation.title)}
+                  </div>
+                  <div className="conversation-item-date">
+                    {new Date(conversation.created_at).toLocaleDateString('ja-JP')}
+                  </div>
                 </div>
-                <div className="conversation-item-date">
-                  {new Date(conversation.created_at).toLocaleDateString('ja-JP')}
-                </div>
+                <button 
+                  className="conversation-item-delete"
+                  onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                  title="会話を削除"
+                >
+                  <span className="material-icons">delete</span>
+                </button>
               </div>
             ))}
           </div>
